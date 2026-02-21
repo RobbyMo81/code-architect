@@ -117,7 +117,8 @@ export async function refreshTopbarUsageSummary(host: UsageSummaryHost) {
 
   try {
     const endDate = formatIsoDate(new Date());
-    const [sessionsResRaw, usage7Raw, usage30Raw] = await Promise.all([
+    const [statusRes, sessionsRes, usage7Res, usage30Res] = await Promise.allSettled([
+      host.client.request("status", {}),
       host.client.request("sessions.list", { limit: 200, messageLimit: 0 }),
       host.client.request("sessions.usage", {
         startDate: isoDaysAgo(6),
@@ -131,16 +132,30 @@ export async function refreshTopbarUsageSummary(host: UsageSummaryHost) {
       }),
     ]);
 
-    const sessionsRes = sessionsResRaw as SessionsListResult;
-    const usage7 = usage7Raw as SessionsUsageResult;
-    const usage30 = usage30Raw as SessionsUsageResult;
+    const status =
+      statusRes.status === "fulfilled"
+        ? (statusRes.value as {
+            sessions?: {
+              recent?: Array<{ key?: string; model?: string | null; totalTokens?: number | null }>;
+            };
+          })
+        : null;
+    const sessionsPayload =
+      sessionsRes.status === "fulfilled" ? (sessionsRes.value as SessionsListResult) : null;
+    const usage7 = usage7Res.status === "fulfilled" ? (usage7Res.value as SessionsUsageResult) : null;
+    const usage30 =
+      usage30Res.status === "fulfilled" ? (usage30Res.value as SessionsUsageResult) : null;
 
-    const rows = sessionsRes?.sessions ?? [];
+    const rows = sessionsPayload?.sessions ?? [];
     const currentRow = findSessionRow(rows, host.sessionKey);
     const usage30Current = findUsageSession(usage30, host.sessionKey);
+    const statusRecent = status?.sessions?.recent ?? [];
+    const statusCurrent = statusRecent.find((row) => candidateSessionKeys(host.sessionKey).includes(row.key ?? ""));
 
-    host.topbarCurrentModel = pickModel(currentRow, usage30Current, usage30);
-    host.topbarCurrentSessionTokens = pickSessionTokens(currentRow, usage30Current);
+    host.topbarCurrentModel =
+      pickModel(currentRow, usage30Current, usage30) ?? statusCurrent?.model ?? null;
+    host.topbarCurrentSessionTokens =
+      pickSessionTokens(currentRow, usage30Current) ?? statusCurrent?.totalTokens ?? null;
     host.topbarWeekTokens = usage7?.totals?.totalTokens ?? 0;
     host.topbarMonthTokens = usage30?.totals?.totalTokens ?? 0;
     host.topbarUsageUpdatedAt = Date.now();
