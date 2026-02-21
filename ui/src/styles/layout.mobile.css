@@ -94,6 +94,20 @@
     display: none;
   }
 
+  .topbar-status .pill--usage {
+    display: none;
+  }
+
+  .motto-ribbon {
+    min-height: 26px;
+    padding: 4px 8px;
+  }
+
+  .motto-ribbon__text {
+    font-size: 11px;
+    text-align: center;
+  }
+
   /* Nav */
   .nav {
     padding: 8px 10px;

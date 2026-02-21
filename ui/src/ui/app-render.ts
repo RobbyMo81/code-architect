@@ -72,6 +72,15 @@ import { renderSkills } from "./views/skills.ts";
 const AVATAR_DATA_RE = /^data:/i;
 const AVATAR_HTTP_RE = /^https?:\/\//i;
 
+function compactNumber(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "—";
+  }
+  return Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(
+    value,
+  );
+}
+
 function resolveAssistantAvatarUrl(state: AppViewState): string | undefined {
   const list = state.agentsList?.agents ?? [];
   const parsed = parseAgentSessionKey(state.sessionKey);
@@ -106,6 +115,10 @@ export function renderApp(state: AppViewState) {
     state.agentsList?.defaultId ??
     state.agentsList?.agents?.[0]?.id ??
     null;
+  const topbarModel = state.topbarCurrentModel ?? "unknown";
+  const topbarSessionTokens = compactNumber(state.topbarCurrentSessionTokens);
+  const topbarWeekTokens = compactNumber(state.topbarWeekTokens);
+  const topbarMonthTokens = compactNumber(state.topbarMonthTokens);
 
   return html`
     <div class="shell ${isChat ? "shell--chat" : ""} ${chatFocus ? "shell--chat-focus" : ""} ${state.settings.navCollapsed ? "shell--nav-collapsed" : ""} ${state.onboarding ? "shell--onboarding" : ""}">
@@ -139,10 +152,21 @@ export function renderApp(state: AppViewState) {
             <span>${t("common.health")}</span>
             <span class="mono">${state.connected ? t("common.ok") : t("common.offline")}</span>
           </div>
-          <div class="pill pill--usage" title="Current model and token usage">
-            <span class="mono">${state.runtimeModel ?? "model: n/a"}</span>
-            <span class="mono">run ${new Intl.NumberFormat().format(state.runtimeTokens ?? 0)} tok</span>
-            <span class="mono">month ${new Intl.NumberFormat().format(state.runtimeMonthTokens ?? 0)}</span>
+          <div class="pill pill--usage" title="Active model for current session">
+            <span>Model</span>
+            <span class="mono">${topbarModel}</span>
+          </div>
+          <div class="pill pill--usage" title="Tokens in current session">
+            <span>Session</span>
+            <span class="mono">${topbarSessionTokens}</span>
+          </div>
+          <div class="pill pill--usage" title="Total tokens in last 7 days">
+            <span>7d</span>
+            <span class="mono">${topbarWeekTokens}</span>
+          </div>
+          <div class="pill pill--usage" title="Total tokens in last 30 days">
+            <span>30d</span>
+            <span class="mono">${topbarMonthTokens}</span>
           </div>
           ${renderThemeToggle(state)}
         </div>
@@ -193,6 +217,22 @@ export function renderApp(state: AppViewState) {
         </div>
       </aside>
       <main class="content ${isChat ? "content--chat" : ""}">
+        <div class="motto-ribbon" role="note">
+          <span class="motto-ribbon__text">Evidence first. Small safe steps. Verify every move.</span>
+        </div>
+        ${
+          state.updateAvailable
+            ? html`<div class="update-banner callout danger" role="alert">
+              <strong>Update available:</strong> v${state.updateAvailable.latestVersion}
+              (running v${state.updateAvailable.currentVersion}).
+              <button
+                class="btn btn--sm update-banner__btn"
+                ?disabled=${state.updateRunning || !state.connected}
+                @click=${() => runUpdate(state)}
+              >${state.updateRunning ? "Updating…" : "Update now"}</button>
+            </div>`
+            : nothing
+        }
         <section class="content-header">
           <div>
             ${state.tab === "usage" ? nothing : html`<div class="page-title">${titleForTab(state.tab)}</div>`}
@@ -816,6 +856,7 @@ export function renderApp(state: AppViewState) {
                 loading: state.chatLoading,
                 sending: state.chatSending,
                 compactionStatus: state.compactionStatus,
+                fallbackStatus: state.fallbackStatus,
                 assistantAvatarUrl: chatAvatarUrl,
                 messages: state.chatMessages,
                 toolMessages: state.chatToolMessages,

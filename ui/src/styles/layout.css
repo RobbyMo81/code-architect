@@ -191,13 +191,34 @@
 }
 
 .topbar-status .pill--usage {
-  display: inline-flex;
-  gap: 10px;
-  max-width: min(56vw, 640px);
+  max-width: 170px;
 }
 
 .topbar-status .pill--usage .mono {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.motto-ribbon {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elev) 70%, var(--accent) 30%);
+}
+
+.motto-ribbon__text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-strong);
 }
 
 /* ===========================================
@@ -618,6 +639,10 @@
 
   .topbar-status {
     flex-wrap: wrap;
+  }
+
+  .topbar-status .pill--usage:nth-of-type(5) {
+    display: none;
   }
 
   .table-head,
