@@ -1,8 +1,12 @@
 import { afterEach, beforeEach } from "vitest";
-import { OpenClawApp } from "../app.ts";
+import "../app.ts";
+import type { OpenClawApp } from "../app.ts";
 
 export function mountApp(pathname: string) {
   window.history.replaceState({}, "", pathname);
+  if (!customElements.get("openclaw-app")) {
+    throw new Error("openclaw-app is not registered");
+  }
   const app = document.createElement("openclaw-app") as OpenClawApp;
   app.connect = () => {
     // no-op: avoid real gateway WS connections in browser tests
