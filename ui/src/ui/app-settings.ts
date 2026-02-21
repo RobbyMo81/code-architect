@@ -21,6 +21,7 @@ import { loadNodes } from "./controllers/nodes.ts";
 import { loadPresence } from "./controllers/presence.ts";
 import { loadSessions } from "./controllers/sessions.ts";
 import { loadSkills } from "./controllers/skills.ts";
+import { refreshTopbarUsageSummary } from "./controllers/usage-summary.ts";
 import {
   inferBasePathFromPathname,
   normalizeBasePath,
@@ -179,6 +180,9 @@ export function setTheme(host: SettingsHost, next: ThemeMode, context?: ThemeTra
 }
 
 export async function refreshActiveTab(host: SettingsHost) {
+  if (host.connected) {
+    void refreshTopbarUsageSummary(host as unknown as Parameters<typeof refreshTopbarUsageSummary>[0]);
+  }
   if (host.tab === "overview") {
     await loadOverview(host);
   }

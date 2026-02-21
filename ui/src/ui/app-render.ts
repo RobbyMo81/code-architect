@@ -115,10 +115,16 @@ export function renderApp(state: AppViewState) {
     state.agentsList?.defaultId ??
     state.agentsList?.agents?.[0]?.id ??
     null;
-  const topbarModel = state.topbarCurrentModel ?? "unknown";
-  const topbarSessionTokens = compactNumber(state.topbarCurrentSessionTokens);
-  const topbarWeekTokens = compactNumber(state.topbarWeekTokens);
-  const topbarMonthTokens = compactNumber(state.topbarMonthTokens);
+  const topbarModel = state.topbarUsageLoading
+    ? "loading…"
+    : state.topbarCurrentModel ?? "unknown";
+  const topbarSessionTokens = state.topbarUsageLoading
+    ? "…"
+    : compactNumber(state.topbarCurrentSessionTokens);
+  const topbarWeekTokens = state.topbarUsageLoading ? "…" : compactNumber(state.topbarWeekTokens);
+  const topbarMonthTokens = state.topbarUsageLoading
+    ? "…"
+    : compactNumber(state.topbarMonthTokens);
 
   return html`
     <div class="shell ${isChat ? "shell--chat" : ""} ${chatFocus ? "shell--chat-focus" : ""} ${state.settings.navCollapsed ? "shell--nav-collapsed" : ""} ${state.onboarding ? "shell--onboarding" : ""}">
@@ -146,7 +152,7 @@ export function renderApp(state: AppViewState) {
             </div>
           </div>
         </div>
-        <div class="topbar-status">
+        <div class="topbar-status" title=${state.topbarUsageError ? `Usage telemetry error: ${state.topbarUsageError}` : ""}>
           <div class="pill">
             <span class="statusDot ${state.connected ? "ok" : ""}"></span>
             <span>${t("common.health")}</span>

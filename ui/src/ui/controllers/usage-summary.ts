@@ -1,5 +1,10 @@
 import type { GatewayBrowserClient } from "../gateway.ts";
-import type { GatewaySessionRow, SessionsListResult, SessionsUsageResult } from "../types.ts";
+import type {
+  GatewaySessionRow,
+  SessionsListResult,
+  SessionsUsageEntry,
+  SessionsUsageResult,
+} from "../types.ts";
 
 type UsageSummaryHost = {
   client: GatewayBrowserClient | null;
@@ -34,11 +39,72 @@ function toErrorMessage(err: unknown): string {
   return "request failed";
 }
 
-function findSessionRow(
-  rows: GatewaySessionRow[],
+function candidateSessionKeys(sessionKey: string): string[] {
+  const key = sessionKey.trim() || "main";
+  const set = new Set<string>([key]);
+  if (key === "main" || key === "agent:main:main") {
+    set.add("main");
+    set.add("agent:main:main");
+  }
+  if (key.startsWith("agent:main:")) {
+    set.add("agent:main:main");
+    set.add("main");
+  }
+  return Array.from(set);
+}
+
+function findSessionRow(rows: GatewaySessionRow[], sessionKey: string): GatewaySessionRow | undefined {
+  const keys = candidateSessionKeys(sessionKey);
+  for (const key of keys) {
+    const hit = rows.find((row) => row.key === key);
+    if (hit) {
+      return hit;
+    }
+  }
+  return rows.find((row) => row.key === "main") ?? rows[0];
+}
+
+function findUsageSession(
+  usage: SessionsUsageResult | null | undefined,
   sessionKey: string,
-): GatewaySessionRow | undefined {
-  return rows.find((row) => row.key === sessionKey) ?? rows.find((row) => row.key === "main");
+): SessionsUsageEntry | undefined {
+  const sessions = usage?.sessions ?? [];
+  const keys = candidateSessionKeys(sessionKey);
+  for (const key of keys) {
+    const hit = sessions.find((entry) => entry.key === key);
+    if (hit) {
+      return hit;
+    }
+  }
+  return sessions.find((entry) => entry.key === "main") ?? sessions[0];
+}
+
+function pickModel(
+  sessionRow: GatewaySessionRow | undefined,
+  usageSession: SessionsUsageEntry | undefined,
+  usage: SessionsUsageResult | null | undefined,
+): string | null {
+  return (
+    sessionRow?.model ??
+    usageSession?.model ??
+    usageSession?.modelProvider ??
+    usage?.aggregates?.byModel?.[0]?.model ??
+    usage?.aggregates?.byModel?.[0]?.provider ??
+    null
+  );
+}
+
+function pickSessionTokens(
+  sessionRow: GatewaySessionRow | undefined,
+  usageSession: SessionsUsageEntry | undefined,
+): number | null {
+  if (typeof sessionRow?.totalTokens === "number") {
+    return sessionRow.totalTokens;
+  }
+  if (typeof usageSession?.usage?.totalTokens === "number") {
+    return usageSession.usage.totalTokens;
+  }
+  return null;
 }
 
 export async function refreshTopbarUsageSummary(host: UsageSummaryHost) {
@@ -70,10 +136,11 @@ export async function refreshTopbarUsageSummary(host: UsageSummaryHost) {
     const usage30 = usage30Raw as SessionsUsageResult;
 
     const rows = sessionsRes?.sessions ?? [];
-    const current = findSessionRow(rows, host.sessionKey);
+    const currentRow = findSessionRow(rows, host.sessionKey);
+    const usage30Current = findUsageSession(usage30, host.sessionKey);
 
-    host.topbarCurrentModel = current?.model ?? current?.modelProvider ?? null;
-    host.topbarCurrentSessionTokens = current?.totalTokens ?? null;
+    host.topbarCurrentModel = pickModel(currentRow, usage30Current, usage30);
+    host.topbarCurrentSessionTokens = pickSessionTokens(currentRow, usage30Current);
     host.topbarWeekTokens = usage7?.totals?.totalTokens ?? 0;
     host.topbarMonthTokens = usage30?.totals?.totalTokens ?? 0;
     host.topbarUsageUpdatedAt = Date.now();
