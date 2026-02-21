@@ -1,9 +1,10 @@
 node_modules
 **/node_modules/
 .env
+.env.local
+.env.*.local
 docker-compose.extra.yml
 dist
-pnpm-lock.yaml
 bun.lock
 bun.lockb
 coverage
@@ -77,8 +78,8 @@ apps/ios/*.mobileprovision
 docs/.local/
 IDENTITY.md
 USER.md
-.tgz
-.idea
+*.tgz
+.idea/
 
 # local tooling
 .serena/

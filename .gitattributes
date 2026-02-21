@@ -1,1 +1,21 @@
 * text=auto eol=lf
+
+# Keep shell scripts LF across platforms.
+*.sh text eol=lf
+
+# Preserve Windows script line endings where applicable.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Treat common assets as binary.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.dmg binary
+*.mp4 binary
+*.mov binary
